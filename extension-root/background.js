@@ -1,8 +1,8 @@
-importScripts("libs/jspdf.umd.min.js", "utils/downloader.js", "utils/pdf.js");
+importScripts("libs/jspdf.umd.min.js", "utils/pdf.js");
 
 const api = globalThis.browser || globalThis.chrome;
 const activeRunsByTab = new Map();
-const supportedPattern = /Bg\d+\.(png|jpg)$/i;
+const supportedPattern = /bg[0-9a-f]+\.(png|jpg)$/i;
 
 function isStudocuUrl(url) {
   if (!url) return false;
@@ -34,10 +34,9 @@ function sendMessageToTab(tabId, message) {
   });
 }
 
-async function runWorkflow(tabId, reason = "auto") {
+async function runWorkflow(tabId, reason = "manual") {
   if (activeRunsByTab.get(tabId)) {
-    console.log("[Studocu PDF] Workflow already running", { tabId });
-    return;
+    return { ok: false, error: "Workflow already running" };
   }
 
   activeRunsByTab.set(tabId, true);
@@ -45,11 +44,8 @@ async function runWorkflow(tabId, reason = "auto") {
   try {
     const tab = await api.tabs.get(tabId);
     if (!isStudocuUrl(tab.url)) {
-      console.log("[Studocu PDF] Ignoring non-Studocu URL", tab.url);
-      return;
+      return { ok: false, error: "Active tab is not a Studocu page" };
     }
-
-    console.log("[Studocu PDF] Starting workflow", { tabId, reason, url: tab.url });
 
     await injectContent(tabId);
 
@@ -59,9 +55,7 @@ async function runWorkflow(tabId, reason = "auto") {
     }
 
     const filtered = scrapeResult.urls.filter((url) => supportedPattern.test(new URL(url).pathname));
-
-    const downloadResult = await globalThis.StudocuPdfDownloader.downloadImages(filtered);
-    const orderedUrls = globalThis.StudocuPdfDownloader.sortByBgIndex(Object.keys(downloadResult.allKnownDownloads));
+    const orderedUrls = globalThis.StudocuPdfBuilder.sortByBgIndex([...new Set(filtered)]);
 
     if (orderedUrls.length === 0) {
       throw new Error("No matching images were found");
@@ -80,29 +74,15 @@ async function runWorkflow(tabId, reason = "auto") {
     });
 
     console.log("[Studocu PDF] Workflow completed", { tabId, images: orderedUrls.length });
+    return { ok: true, imageCount: orderedUrls.length };
   } catch (error) {
-    console.error("[Studocu PDF] Workflow failed", { tabId, error: String(error?.message || error) });
+    const message = String(error?.message || error);
+    console.error("[Studocu PDF] Workflow failed", { tabId, error: message });
+    return { ok: false, error: message };
   } finally {
     activeRunsByTab.delete(tabId);
   }
 }
-
-api.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === "complete" && isStudocuUrl(tab.url)) {
-    runWorkflow(tabId, "tab-updated");
-  }
-});
-
-api.tabs.onActivated.addListener(async ({ tabId }) => {
-  try {
-    const tab = await api.tabs.get(tabId);
-    if (isStudocuUrl(tab.url)) {
-      runWorkflow(tabId, "tab-activated");
-    }
-  } catch (error) {
-    console.warn("[Studocu PDF] Failed to inspect active tab", String(error?.message || error));
-  }
-});
 
 api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "MANUAL_TRIGGER") return;
@@ -111,10 +91,8 @@ api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     try {
       const tab = tabs?.[0];
       if (!tab?.id) throw new Error("No active tab");
-      if (!isStudocuUrl(tab.url)) throw new Error("Active tab is not a Studocu page");
-
-      await runWorkflow(tab.id, "manual-trigger");
-      sendResponse({ ok: true });
+      const result = await runWorkflow(tab.id, "manual-trigger");
+      sendResponse(result);
     } catch (error) {
       sendResponse({ ok: false, error: String(error?.message || error) });
     }

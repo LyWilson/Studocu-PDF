@@ -1,5 +1,5 @@
 (() => {
-  const IMAGE_PATTERN = /Bg\d+\.(png|jpg)$/i;
+  const IMAGE_PATTERN = /bg[0-9a-f]+\.(png|jpg)$/i;
 
   function normalizeUrl(rawUrl) {
     if (!rawUrl) return null;
@@ -49,14 +49,24 @@
       throw new Error("Scroll utilities not loaded");
     }
 
+    const found = new Set();
+    const collect = () => {
+      for (const url of collectImageUrls()) found.add(url);
+    };
+
+    collect();
     await window.StudocuPdfScrollUtils.scrollUntilStable({
       delayMs: 200,
       stepPx: Math.max(500, Math.floor(window.innerHeight * 0.9)),
       stableChecksRequired: 6,
-      maxIterations: 2500
+      maxIterations: 2500,
+      onIteration: collect
     });
+    collect();
 
-    return collectImageUrls();
+    const urls = Array.from(found);
+    console.log("[Studocu PDF] Extracted image URLs", urls.length);
+    return urls;
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

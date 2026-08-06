@@ -4,7 +4,7 @@
   "description": "Auto-scroll Studocu pages, download BgX images, and combine them into a PDF.",
   "version": "1.0.0",
   "permissions": ["activeTab", "downloads", "storage", "scripting", "tabs"],
-  "host_permissions": ["https://www.studocu.com/*"],
+  "host_permissions": ["https://*.studocu.com/*"],
   "background": {
     "service_worker": "background.js"
   },

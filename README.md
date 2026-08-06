@@ -2,10 +2,9 @@
 
 Browser extension (Manifest V3) that:
 
-- Detects `studocu.com` tabs
+- Runs only when you click **Generate Studocu PDF** in the popup
 - Auto-scrolls until lazy-loaded content stops growing
-- Extracts `BgX.png` / `BgX.jpg` image URLs from `<img>` and CSS backgrounds
-- Downloads deduplicated images with retry support
+- Extracts `bgX.png` / `bgX.jpg` image URLs from `<img>` and CSS backgrounds
 - Builds a single ordered PDF (`studocu_combined.pdf`) using jsPDF
 
 ## Project Structure
@@ -48,7 +47,6 @@ zip -r studocu-extension.zip extension-root
 
 ## How It Works
 
-- Auto-run: when a tab is updated/activated and hostname contains `studocu.com`
 - Manual run: click the extension icon and press **Generate Studocu PDF**
 - Image ordering: `Bg1 -> Bg2 -> Bg3 ...`
 - PDF pages auto-fit image width/height with PNG embedding

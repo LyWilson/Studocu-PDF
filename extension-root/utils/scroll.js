@@ -15,6 +15,8 @@
       window.scrollBy(0, stepPx);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
 
+      if (options.onIteration) options.onIteration();
+
       const currentHeight = document.body.scrollHeight;
       if (currentHeight > lastHeight) {
         lastHeight = currentHeight;

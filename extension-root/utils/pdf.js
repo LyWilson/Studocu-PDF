@@ -20,6 +20,18 @@
     return await response.blob();
   }
 
+  function sortByBgIndex(urls) {
+    const rank = (url) => {
+      const match = url.match(/bg([0-9a-f]+)\.(png|jpg)$/i);
+      return match ? parseInt(match[1], 16) : Number.MAX_SAFE_INTEGER;
+    };
+
+    return [...urls].sort((a, b) => {
+      const diff = rank(a) - rank(b);
+      return diff !== 0 ? diff : a.localeCompare(b);
+    });
+  }
+
   async function buildCombinedPdf(urls) {
     const { jsPDF } = globalThis.jspdf;
     let pdf = null;
@@ -60,21 +72,18 @@
   }
 
   async function savePdfBlob(blob, filename = "studocu_combined.pdf") {
-    const objectUrl = URL.createObjectURL(blob);
-    try {
-      await api().downloads.download({
-        url: objectUrl,
-        filename,
-        saveAs: true,
-        conflictAction: "overwrite"
-      });
-    } finally {
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 120000);
-    }
+    const dataUrl = await blobToDataUrl(blob);
+    await api().downloads.download({
+      url: dataUrl,
+      filename,
+      saveAs: true,
+      conflictAction: "overwrite"
+    });
   }
 
   globalThis.StudocuPdfBuilder = {
     buildCombinedPdf,
-    savePdfBlob
+    savePdfBlob,
+    sortByBgIndex
   };
 })();

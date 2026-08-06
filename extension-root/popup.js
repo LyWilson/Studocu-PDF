@@ -19,6 +19,6 @@ document.getElementById("run").addEventListener("click", async () => {
       return;
     }
 
-    setStatus("Workflow started. Check extension/service worker logs.");
+    setStatus(`Workflow completed (${response.imageCount} pages)`);
   });
 });
