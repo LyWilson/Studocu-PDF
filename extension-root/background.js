@@ -7,7 +7,8 @@ const supportedPattern = /Bg\d+\.(png|jpg)$/i;
 function isStudocuUrl(url) {
   if (!url) return false;
   try {
-    return new URL(url).hostname.includes("studocu.com");
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname === "studocu.com" || hostname.endsWith(".studocu.com");
   } catch (_) {
     return false;
   }
